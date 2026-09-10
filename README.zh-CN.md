@@ -162,3 +162,7 @@ scripts/    构建、测试、打包与可选在线检查
 欢迎通过 [GitHub Issues](https://github.com/mayunaise/stockpeek/issues) 反馈问题或提出建议。行情和图表问题请附证券代码、市场、来源时间、macOS 版本及复现步骤；上传截图前请移除个人信息。
 
 版本变化见 [CHANGELOG.md](CHANGELOG.md)，当前预览版说明见 [release notes](docs/release-notes.md)。
+
+## 许可证
+
+StockPeek 采用 [MIT 许可证](LICENSE)，允许按许可条款商用、修改和分发。该许可证不授予第三方行情数据或服务的使用及再分发权利。

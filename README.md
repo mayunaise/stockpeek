@@ -149,3 +149,7 @@ Early preview, version 0.2.0. Multi-display behavior, long-running energy use, a
 Report bugs or suggest improvements through [GitHub Issues](https://github.com/mayunaise/stockpeek/issues). For data or chart issues, include the security code, market, source timestamp, macOS version, and steps to reproduce. Remove personal information from any attached screenshots.
 
 See [CHANGELOG.md](CHANGELOG.md) for changes and [release notes](docs/release-notes.md) for the current preview.
+
+## License
+
+StockPeek is licensed under the [MIT License](LICENSE). Commercial use, modification, and distribution are permitted under its terms. This license does not grant rights to third-party market data or services.
