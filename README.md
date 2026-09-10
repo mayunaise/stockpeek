@@ -1,8 +1,30 @@
-# StockPeek
+<div align="center">
+  <img src="Assets/AppIcon.png" width="112" alt="StockPeek waveform app icon">
+  <h1>StockPeek</h1>
+  <p><strong>Your watchlist, a glance away.</strong></p>
+  <p>A compact, native macOS menu bar app for stocks, ETFs, and market indices.</p>
+  <p>macOS 26+ · Apple Silicon · SwiftUI · Preview</p>
+  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+  <p><a href="https://github.com/mayunaise/stockpeek/releases">Download</a> · <a href="#preview">Preview</a> · <a href="#features">Features</a> · <a href="#build-and-test">Build</a></p>
+</div>
 
-A compact, native macOS menu bar app for keeping an eye on stocks, ETFs, and market indices.
+StockPeek keeps prices in a small menu bar ticker. Hover to scan your watchlist and its intraday charts, then click a security to explore the details. A dark, translucent interface keeps the focus on the numbers.
 
-Built with SwiftUI, AppKit, and Charts. No third-party runtime dependencies. The current interface is in Simplified Chinese.
+Built with SwiftUI, AppKit, and Charts, with no third-party runtime dependencies. The current app interface is in Simplified Chinese; both English and Chinese documentation are available.
+
+## Preview
+
+<table>
+  <tr><th>Watchlist at a glance</th><th>Quotes in detail</th></tr>
+  <tr>
+    <td align="center"><img src="Assets/previews/overview.svg" width="300" alt="Floating watchlist with index carousel, prices, and intraday charts"></td>
+    <td align="center"><img src="Assets/previews/detail.svg" width="300" alt="ETF detail panel with intraday chart and open, high, and low percentage changes"></td>
+  </tr>
+</table>
+
+<p align="center"><img src="Assets/previews/watchlist.svg" width="820" alt="StockPeek management window with watchlist, grouping, and sorting controls"></p>
+
+Interface illustrations based on the app layout, using fictional securities and prices. These are not live screenshots or investment recommendations. The app currently displays Chinese labels; English labels are used here for illustration.
 
 ## Requirements
 
@@ -17,6 +39,21 @@ Download the Apple Silicon DMG from [Releases](https://github.com/mayunaise/stoc
 This preview is ad-hoc signed, not Developer ID signed or notarized. macOS may block downloaded builds; building locally is an alternative. Closing the management window leaves the app running in the menu bar.
 
 ## Features
+
+### Small footprint, quick access
+
+The menu bar cycles through your selected securities. Long names scroll inside the compact ticker, and the most recent price stays visible when an update is unavailable. Hover opens the watchlist; detail views keep the same compact dimensions.
+
+### Organize your own view of the market
+
+Create groups, add a security to multiple groups with checkboxes, and drag stocks or groups into the order you prefer. Pin-to-top buttons provide a quick shortcut; newly added securities start at the top. Add more securities directly from the floating panel.
+
+### Charts with market context
+
+Scan intraday sparklines beside each security, or open a full detail chart with open/high/low changes relative to the previous close. A separate, customizable index carousel keeps the broader market within reach.
+
+### Capability overview
+
 
 - Compact menu bar ticker with scrolling long names; configurable rotation and gain/loss colors.
 - Hover to open a 300 × 430 pt watchlist with minute charts. Click a security for detailed quotes and charts in the same panel size.
@@ -90,7 +127,7 @@ For compatibility with earlier development builds, the internal bundle identifie
 
 Snapshots overwrite previous contents instead of appending history. Normal stock snapshot writes are throttled to once per 15 seconds; orderly exit flushes pending data. Stock snapshots are limited to 32 MB and index snapshots to 2 MB. Invalid or mismatched cached data is skipped.
 
-The app sends queried security codes and search text to the selected market-data services. It has no application account, analytics SDK, or file-upload feature. Personal watchlists, preferences, caches, and compiled artifacts are not included in this repository.
+The app sends queried security codes and search text to the selected market-data services. It has no application account, analytics SDK, or file-upload feature. Personal storage files, preferences, caches, and compiled artifacts are not included in this repository. The documentation includes interface illustrations with fictional securities.
 
 ## Project layout
 
@@ -106,3 +143,9 @@ The icon is based on the same waveform symbol used in the app. See [Assets/READM
 ## Status
 
 Early preview, version 0.2.0. Multi-display behavior, long-running energy use, and full-screen interactions need further validation. Price alerts, launch at login, order entry, and licensed market feeds are not included.
+
+## Feedback
+
+Report bugs or suggest improvements through [GitHub Issues](https://github.com/mayunaise/stockpeek/issues). For data or chart issues, include the security code, market, source timestamp, macOS version, and steps to reproduce. Remove personal information from any attached screenshots.
+
+See [CHANGELOG.md](CHANGELOG.md) for changes and [release notes](docs/release-notes.md) for the current preview.
