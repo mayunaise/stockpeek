@@ -59,6 +59,7 @@ final class StockStore: ObservableObject {
     private var failures = 0
     private var lastRotation = Date()
     private var initialMinutePending = Set<String>()
+    private var pendingQuoteIDs = Set<String>()
     private var bootstrappingQuotes = false
     private var canSave = true
     private var cacheDirty = false
@@ -195,10 +196,19 @@ final class StockStore: ObservableObject {
         if !watchlist.visibleIDs.contains(watchlist.selectedID ?? "") { watchlist.selectedID = watchlist.visibleIDs.first }
         if let detailID, !watchlist.visibleIDs.contains(detailID) { backToOverview() }
         save()
-        if added { nextQuotePoll = .distantPast; requestRefresh() }
+        if added {
+            pendingQuoteIDs.insert(security.id)
+            initialMinutePending.insert(security.id)
+            nextMinutePoll[security.id] = .distantPast
+            nextQuotePoll = .distantPast
+            requestRefresh()
+            requestMinutes()
+        }
     }
     func remove(_ id: String) {
         watchlist.remove(id)
+        pendingQuoteIDs.remove(id)
+        initialMinutePending.remove(id)
         if !watchlist.visibleIDs.contains(watchlist.selectedID ?? "") { watchlist.selectedID = watchlist.visibleIDs.first }
         quotes.removeValue(forKey: id)
         series.removeValue(forKey: id)
@@ -261,7 +271,7 @@ final class StockStore: ObservableObject {
         if cacheDirty { persistCache() }
         let closed = Set(watchlist.ids.filter { !MarketClock.isTrading($0, at: clock()) })
         if closed != closedIDs { closedIDs = closed; nextQuotePoll = .distantPast }
-        if !watchlist.ids.isEmpty && closed.count == watchlist.ids.count && !bootstrappingQuotes {
+        if !watchlist.ids.isEmpty && closed.count == watchlist.ids.count && !bootstrappingQuotes && pendingQuoteIDs.isEmpty {
             quoteTask?.cancel(); quoteTask = nil; isFetching = false
         }
         if networkEnabled { indices.tick(visible: expanded || showingIndices) }
@@ -274,13 +284,17 @@ final class StockStore: ObservableObject {
     }
     func requestRefresh(includeClosed: Bool = false) {
         guard networkEnabled, !sleeping, quoteTask == nil, !watchlist.ids.isEmpty,
-              includeClosed || watchlist.ids.contains(where: { MarketClock.isTrading($0, at: clock()) }) else { return }
-        bootstrappingQuotes = includeClosed
+              includeClosed || !pendingQuoteIDs.isEmpty || watchlist.ids.contains(where: { MarketClock.isTrading($0, at: clock()) }) else { return }
+        bootstrappingQuotes = includeClosed || !pendingQuoteIDs.isEmpty
         let generation = providerGeneration
         quoteTask = Task { [weak self] in
             guard let self else { return }
             await self.reloadQuotes(includeClosed: includeClosed)
-            if self.providerGeneration == generation { self.quoteTask = nil; self.bootstrappingQuotes = false }
+            if self.providerGeneration == generation {
+                self.quoteTask = nil
+                self.bootstrappingQuotes = false
+                if !self.pendingQuoteIDs.isEmpty { self.requestRefresh() }
+            }
         }
     }
     func reloadQuotes(includeClosed: Bool = false) async {
@@ -288,7 +302,8 @@ final class StockStore: ObservableObject {
         isFetching = true
         let generation = providerGeneration
         defer { if providerGeneration == generation { isFetching = false } }
-        let requested = watchlist.ids.filter { includeClosed || MarketClock.isTrading($0, at: clock()) }
+        let requested = watchlist.ids.filter { includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock()) }
+        pendingQuoteIDs.subtract(requested)
         guard !requested.isEmpty else { return }
         do {
             let result = try await marketClient.quotes(ids: requested)
@@ -406,6 +421,7 @@ final class IndexStore: ObservableObject {
     private var writable = true
     private var cachedSeries: [String: MinuteSeries] = [:]
     private var initialMinutePending = Set<String>()
+    private var pendingQuoteIDs = Set<String>()
     private var bootstrappingQuotes = false
     func bootstrap() {
         initialMinutePending = Set(securities.map(\.id).filter { MarketClock.isChartMinute($0, at: clock()) || cachedSeries[$0]?.day != MarketClock.day(clock(), id: $0) })
@@ -459,8 +475,12 @@ final class IndexStore: ObservableObject {
     func add(_ security: Security) {
         guard security.kind == "指数", securities.count < 20, !securities.contains(where: { $0.id == security.id }) else { return }
         securities.append(security); if currentID == nil { currentID = security.id }; save(); nextQuote = .distantPast
+        pendingQuoteIDs.insert(security.id)
+        initialMinutePending.insert(security.id)
+        refreshQuotes()
     }
     func remove(_ id: String) {
+        pendingQuoteIDs.remove(id); initialMinutePending.remove(id)
         securities.removeAll { $0.id == id }; quotes.removeValue(forKey: id); cachedSeries.removeValue(forKey: id); persistCache()
         if currentID == id { currentID = securities.first?.id }
         if detailID == id { detailID = nil }
@@ -476,9 +496,10 @@ final class IndexStore: ObservableObject {
         if let data = try? JSONEncoder().encode(securities) { defaults.set(data, forKey: "marketIndices") }
     }
     private func refreshQuotes(includeClosed: Bool = false) {
-        let requested = securities.map(\.id).filter { includeClosed || MarketClock.isTrading($0, at: clock()) }, source = client, token = generation
+        let requested = securities.map(\.id).filter { includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock()) }, source = client, token = generation
         guard !requested.isEmpty, quoteTask == nil else { return }
-        bootstrappingQuotes = includeClosed
+        bootstrappingQuotes = includeClosed || !pendingQuoteIDs.isEmpty
+        pendingQuoteIDs.subtract(requested)
         quoteTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -492,6 +513,7 @@ final class IndexStore: ObservableObject {
             self.persistCache()
             self.nextQuote = Date().addingTimeInterval(self.quoteError == nil ? MarketClock.pollingInterval(at: Date(), ids: requested) : 60)
             self.quoteTask = nil; self.bootstrappingQuotes = false
+            if !self.pendingQuoteIDs.isEmpty { self.refreshQuotes() }
         }
     }
     private func refreshMinutes() {

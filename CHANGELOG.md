@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Fetch a one-time snapshot for newly added indices, including queued additions during closed sessions or while the panel is hidden; allow an initial intraday chart fetch on first detail display.
+
+- Fetch a one-time quote snapshot when adding a watchlist security, including outside trading hours. Queue additions made while another quote request is running.
+- Allow newly added securities to load an intraday chart on first display during closed sessions, without enabling regular closed-market polling.
+
 ## 0.2.0 — First public preview
 
 - Rename the application to StockPeek while preserving existing local settings.

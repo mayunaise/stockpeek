@@ -59,6 +59,22 @@ final class IndexProtocol: URLProtocol, @unchecked Sendable {
         for id in store.securities.map(\.id) { store.remove(id) }
         precondition(store.current == nil && store.detailID == nil)
         precondition(IndexStore(clock: { MarketClock.date("20260910100000")! }, defaults: defaults, client: TencentClient()).securities.isEmpty)
+        marketNow = MarketClock.date("20260910180000")!
+        let hsi = Security.indexCatalog.first { $0.id == "HK.HSI" }!
+        store.add(hsi)
+        store.add(index)
+        store.tick(visible: false)
+        for _ in 0..<100 {
+            if store.quotes[hsi.id] != nil && store.quotes[index.id] != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        precondition(store.quotes[hsi.id] != nil && store.quotes[index.id] != nil, "Closed index additions must fetch snapshots, including queued additions while hidden")
+        try await Task.sleep(for: .milliseconds(50))
+        let afterAdd = IndexProtocol.requests
+        store.tick(visible: true, now: Date().addingTimeInterval(120))
+        try await Task.sleep(for: .milliseconds(50))
+        precondition(IndexProtocol.requests == afterAdd, "Adding indices must not enable closed-market polling")
+        store.suspend()
         let bad = Data("broken".utf8); defaults.set(bad, forKey: "marketIndices")
         let corrupt = IndexStore(clock: { MarketClock.date("20260910100000")! }, defaults: defaults, client: TencentClient()); corrupt.add(index)
         precondition(corrupt.persistenceError != nil && defaults.data(forKey: "marketIndices") == bad)

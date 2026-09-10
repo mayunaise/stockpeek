@@ -74,6 +74,20 @@ struct NetworkTests {
         startup.refresh(); startup.requestRefresh()
         try await Task.sleep(for: .milliseconds(100))
         precondition(FixtureProtocol.requests == afterStartup, "Closed startup snapshot must not become polling")
+        startup.remove("SH.600519")
+        startup.remove("SZ.300750")
+        startup.add(Security.catalog.first { $0.id == "SH.600519" }!)
+        startup.add(Security.catalog.first { $0.id == "SZ.300750" }!)
+        for _ in 0..<100 {
+            if startup.quotes["SH.600519"] != nil && startup.quotes["SZ.300750"] != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        precondition(startup.quotes["SH.600519"] != nil && startup.quotes["SZ.300750"] != nil, "Closed additions must fetch snapshots even while a request is pending")
+        try await Task.sleep(for: .milliseconds(100))
+        let afterAdd = FixtureProtocol.requests
+        startup.refresh(); startup.requestRefresh()
+        try await Task.sleep(for: .milliseconds(100))
+        precondition(FixtureProtocol.requests == afterAdd, "Closed additions must not enable polling")
         startup.sleeping = true
         print("PASS: real client/store boundary, partial response, older response isolation, offline cache, recovery, freshness")
     }
