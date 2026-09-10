@@ -1,0 +1,43 @@
+import Foundation
+
+@main
+struct ModelTests {
+    static func main() throws {
+        var large = WatchlistState(ids: [])
+        for index in 0..<500 { precondition(large.add(String(format: "SH.%06d", index))) }
+        precondition(!large.add("SZ.000001"))
+        let largeRestored = try JSONDecoder().decode(WatchlistState.self, from: JSONEncoder().encode(large))
+        precondition(largeRestored.ids.count == 500)
+        var state = WatchlistState(ids: ["SH.600519", "SZ.300750"])
+        assert(!state.add("SH.600519"), "Duplicates must be rejected")
+        assert(state.ids.count == 2)
+        state.advance(paused: true)
+        assert(state.selectedID == "SH.600519", "Hover must freeze selection")
+        state.advance(paused: false)
+        assert(state.selectedID == "SZ.300750")
+        state.remove("SH.600519")
+        assert(state.selectedID == "SZ.300750", "Removing another row must preserve selection")
+        state.remove("SZ.300750")
+        state.advance(paused: false)
+        assert(state.selectedID == nil, "Empty watchlist must safely rotate")
+        assert(state.add("SH.600036"))
+        assert(state.selectedID == "SH.600036")
+        _ = state.add("SZ.000858")
+        assert(state.ids.first == "SZ.000858", "New stocks must be inserted first")
+        state.moveToTop("SH.600036")
+        assert(state.ids == ["SH.600036", "SZ.000858"])
+        state.moveToTop("missing")
+        state.moveToTop("SH.600036")
+        assert(state.ids == ["SH.600036", "SZ.000858"], "Top and unknown IDs must be safe")
+        state.move("SZ.000858", by: -1)
+        assert(state.ids == ["SZ.000858", "SH.600036"])
+        assert(state.selectedID == "SH.600036", "Sorting must preserve identity")
+        let data = try JSONEncoder().encode(state)
+        let restored = try JSONDecoder().decode(WatchlistState.self, from: data)
+        assert(restored.ids == state.ids && restored.selectedID == state.selectedID)
+        let malformed = Data(#"{"version":1,"ids":["SH.600519","SH.600519"],"selectedID":"missing"}"#.utf8)
+        let repaired = try JSONDecoder().decode(WatchlistState.self, from: malformed)
+        assert(repaired.ids == ["SH.600519"] && repaired.selectedID == "SH.600519")
+        print("PASS: duplicate, paused rotation, selection, empty state, ordering, persistence, repair")
+    }
+}
