@@ -42,6 +42,10 @@ struct OverlayView: View {
         self.openManager = openManager; self.openSearch = openSearch; self.openIndices = openIndices
     }
 
+    /// Inside a group the panel only detaches the security from that group; "全部" removes it from the watchlist.
+    private var removalTitle: String { store.watchlist.activeGroupID == nil ? "移出自选" : "移出当前分组" }
+    private var removalIcon: String { store.watchlist.activeGroupID == nil ? "minus.circle" : "folder.badge.minus" }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -54,8 +58,8 @@ struct OverlayView: View {
                 if store.detailID == nil && indices.detailID == nil { Text("\(store.visibleStocks.count)").font(.system(size: 10)).foregroundStyle(.secondary) }
                 Spacer()
                 if store.detailID != nil {
-                    Button { if let id = store.detailID { store.remove(id) } } label: { Image(systemName: "minus.circle") }
-                        .accessibilityLabel("移出自选").help("移出自选")
+                    Button { if let id = store.detailID { store.removeFromCurrentGroup(id) } } label: { Image(systemName: removalIcon) }
+                        .accessibilityLabel(removalTitle).help(removalTitle)
                 }
                 Button(action: openSearch) { Image(systemName: "plus") }
                     .accessibilityLabel("添加自选").help("添加自选")
@@ -139,7 +143,7 @@ struct OverlayView: View {
                             .background(store.current?.id == security.id ? .white.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 10))
                             .accessibilityLabel("\(security.name)，\(store.quotes[security.id].map { priceText($0.price) + "，" + changeText($0.change) } ?? "暂无行情")，查看详情")
                             .contextMenu {
-                                Button(role: .destructive) { store.remove(security.id) } label: { Label("移出自选", systemImage: "minus.circle") }
+                                Button(role: .destructive) { store.removeFromCurrentGroup(security.id) } label: { Label(removalTitle, systemImage: removalIcon) }
                             }
                         }
                     }.padding(.horizontal, 8)

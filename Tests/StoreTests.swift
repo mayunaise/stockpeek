@@ -55,6 +55,23 @@ struct StoreTests {
         store.collapse(); store.collapse()
         assert(unpinEvents == 1 && !store.expanded && store.detailID == nil)
         withExtendedLifetime(observer) {}
+        // Floating-panel removal must detach the security from the active group only.
+        store.add(online, groupIDs: Set(groups))
+        store.chooseGroup(groups[0])
+        store.openDetail(online.id)
+        store.removeFromCurrentGroup(online.id)
+        assert(store.detailID == nil, "Removing the displayed security must return to overview")
+        assert(store.watchlist.ids.contains(online.id), "Floating panel removal must keep the security in the watchlist")
+        assert(!store.watchlist.visibleIDs.contains(online.id), "Floating panel removal must leave the active group")
+        assert(groups.dropFirst().allSatisfy { store.watchlist.memberships[$0, default: []].contains(online.id) }, "Other groups must keep the security")
+        store.chooseGroup(groups[1])
+        assert(store.visibleStocks.map(\.id) == [online.id])
+        store.removeFromCurrentGroup(online.id)
+        assert(store.watchlist.ids.contains(online.id) && store.watchlist.visibleIDs.isEmpty)
+        store.chooseGroup(nil)
+        assert(store.watchlist.ids.contains(online.id), "Removal from a group must keep the security listed everywhere")
+        store.removeFromCurrentGroup(online.id)
+        assert(!store.watchlist.ids.contains(online.id), "Removal without an active group must delete the security")
         for id in store.watchlist.ids { store.remove(id) }
         assert(StockStore(clock: { MarketClock.date("20260910100000")! }, fileURL: file, defaults: defaults, startTimer: false).stocks.isEmpty)
         let bad = Data("unreadable user file".utf8)
@@ -63,6 +80,6 @@ struct StoreTests {
         corrupt.add(added)
         let preserved = try Data(contentsOf: file)
         assert(corrupt.persistenceError != nil && preserved == bad)
-        print("PASS: no synthetic prices, two-level navigation, selection isolation, deletion, collapse, persistence")
+        print("PASS: no synthetic prices, two-level navigation, selection isolation, deletion, collapse, floating group removal, persistence")
     }
 }

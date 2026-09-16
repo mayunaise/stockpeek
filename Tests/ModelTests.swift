@@ -32,12 +32,22 @@ struct ModelTests {
         state.move("SZ.000858", by: -1)
         assert(state.ids == ["SZ.000858", "SH.600036"])
         assert(state.selectedID == "SH.600036", "Sorting must preserve identity")
+        var groupState = WatchlistState(ids: ["SH.600519", "SZ.300750"])
+        assert(groupState.createGroup("科技"))
+        let groupID = groupState.groups[0].id
+        groupState.toggleMembership("SH.600519", groupID: groupID)
+        groupState.removeFromGroup("SZ.300750", groupID: groupID)
+        groupState.removeFromGroup("SH.600519", groupID: "missing")
+        assert(groupState.memberships[groupID] == ["SH.600519"], "Group removal must only detach membership")
+        groupState.removeFromGroup("SH.600519", groupID: groupID)
+        assert(groupState.ids == ["SH.600519", "SZ.300750"], "Group removal must keep the security itself")
+        assert(groupState.memberships[groupID]?.isEmpty == true)
         let data = try JSONEncoder().encode(state)
         let restored = try JSONDecoder().decode(WatchlistState.self, from: data)
         assert(restored.ids == state.ids && restored.selectedID == state.selectedID)
         let malformed = Data(#"{"version":1,"ids":["SH.600519","SH.600519"],"selectedID":"missing"}"#.utf8)
         let repaired = try JSONDecoder().decode(WatchlistState.self, from: malformed)
         assert(repaired.ids == ["SH.600519"] && repaired.selectedID == "SH.600519")
-        print("PASS: duplicate, paused rotation, selection, empty state, ordering, persistence, repair")
+        print("PASS: duplicate, paused rotation, selection, empty state, ordering, group removal, persistence, repair")
     }
 }

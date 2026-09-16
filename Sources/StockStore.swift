@@ -183,6 +183,15 @@ final class StockStore: ObservableObject {
         if let detailID, !watchlist.visibleIDs.contains(detailID) { backToOverview() }
         save()
     }
+    /// Removes a security from the group the floating panel is currently showing.
+    /// Falls back to removing it from the whole watchlist when no group is active ("全部").
+    func removeFromCurrentGroup(_ id: String) {
+        guard let groupID = watchlist.activeGroupID else { remove(id); return }
+        watchlist.removeFromGroup(id, groupID: groupID)
+        if !watchlist.visibleIDs.contains(watchlist.selectedID ?? "") { watchlist.selectedID = watchlist.visibleIDs.first }
+        if let detailID, !watchlist.visibleIDs.contains(detailID) { backToOverview() }
+        save()
+    }
 
     func add(_ security: Security, groupIDs: Set<String>? = nil) {
         let added = watchlist.add(security.id)
