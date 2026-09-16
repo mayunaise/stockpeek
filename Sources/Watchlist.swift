@@ -123,6 +123,10 @@ struct WatchlistState: Codable {
         if memberships[groupID, default: []].contains(stockID) { memberships[groupID]?.removeAll { $0 == stockID } }
         else { memberships[groupID, default: []].append(stockID) }
     }
+    mutating func removeFromGroup(_ id: String, groupID: String) {
+        guard groups.contains(where: { $0.id == groupID }) else { return }
+        memberships[groupID]?.removeAll { $0 == id }
+    }
 
     mutating func advance(paused: Bool, direction: Int = 1) {
         let eligible = visibleIDs

@@ -4,7 +4,7 @@
 
 ### Added
 
-- Remove a watchlist security directly from the floating panel via the detail toolbar button or a row context menu.
+- Remove a security from the floating panel via the detail toolbar button or a row context menu; inside a group this detaches it from that group only, while the "全部" page still removes it from the watchlist.
 
 ### Fixed
 
