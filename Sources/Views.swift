@@ -53,6 +53,10 @@ struct OverlayView: View {
                 else { Text(indices.detailID == nil ? "个股详情" : "指数详情").font(.system(size: 14, weight: .semibold)) }
                 if store.detailID == nil && indices.detailID == nil { Text("\(store.visibleStocks.count)").font(.system(size: 10)).foregroundStyle(.secondary) }
                 Spacer()
+                if store.detailID != nil {
+                    Button { if let id = store.detailID { store.remove(id) } } label: { Image(systemName: "minus.circle") }
+                        .accessibilityLabel("移出自选").help("移出自选")
+                }
                 Button(action: openSearch) { Image(systemName: "plus") }
                     .accessibilityLabel("添加自选").help("添加自选")
                 Button { store.refreshCurrentPage() } label: { Image(systemName: "arrow.clockwise") }
@@ -134,6 +138,9 @@ struct OverlayView: View {
                             }.buttonStyle(.plain)
                             .background(store.current?.id == security.id ? .white.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 10))
                             .accessibilityLabel("\(security.name)，\(store.quotes[security.id].map { priceText($0.price) + "，" + changeText($0.change) } ?? "暂无行情")，查看详情")
+                            .contextMenu {
+                                Button(role: .destructive) { store.remove(security.id) } label: { Label("移出自选", systemImage: "minus.circle") }
+                            }
                         }
                     }.padding(.horizontal, 8)
                 }

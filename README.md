@@ -46,7 +46,7 @@ The menu bar cycles through your selected securities. Long names scroll inside t
 
 ### Organize your own view of the market
 
-Create groups, add a security to multiple groups with checkboxes, and drag stocks or groups into the order you prefer. Pin-to-top buttons provide a quick shortcut; newly added securities start at the top. Add more securities directly from the floating panel.
+Create groups, add a security to multiple groups with checkboxes, and drag stocks or groups into the order you prefer. Pin-to-top buttons provide a quick shortcut; newly added securities start at the top. Add more securities directly from the floating panel, and remove them there via the detail toolbar button or a row's right-click menu.
 
 ### Charts with market context
 
@@ -71,6 +71,7 @@ Scan intraday sparklines beside each security, or open a full detail chart with 
 | --- | --- |
 | Hover over the menu bar ticker | Open the current group's watchlist |
 | Click a stock | Open its detail page |
+| Minus icon on the detail page, or right-click a listed stock | Remove the stock from the watchlist |
 | Pin icon | Keep the floating panel open |
 | Move the pointer away | Dismiss an unpinned panel |
 | ⌘D while the app is active | Open and pin the watchlist |

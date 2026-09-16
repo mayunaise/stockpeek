@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Remove a watchlist security directly from the floating panel via the detail toolbar button or a row context menu.
+
 ### Fixed
 
 - Manual refresh fetches current-page quotes and intraday charts once, including closed sessions and index details.
