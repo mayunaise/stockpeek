@@ -74,6 +74,16 @@ final class IndexProtocol: URLProtocol, @unchecked Sendable {
         store.tick(visible: true, now: Date().addingTimeInterval(120))
         try await Task.sleep(for: .milliseconds(50))
         precondition(IndexProtocol.requests == afterAdd, "Adding indices must not enable closed-market polling")
+        store.refreshCurrentPage()
+        for _ in 0..<100 {
+            if IndexProtocol.requests > afterAdd { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        precondition(IndexProtocol.requests == afterAdd + 1, "Manual refresh must request the visible index once during closed sessions")
+        try await Task.sleep(for: .milliseconds(50))
+        store.tick(visible: true, now: Date().addingTimeInterval(120))
+        try await Task.sleep(for: .milliseconds(50))
+        precondition(IndexProtocol.requests == afterAdd + 1, "Manual refresh must not enable closed-market polling")
         store.suspend()
         let bad = Data("broken".utf8); defaults.set(bad, forKey: "marketIndices")
         let corrupt = IndexStore(clock: { MarketClock.date("20260910100000")! }, defaults: defaults, client: TencentClient()); corrupt.add(index)

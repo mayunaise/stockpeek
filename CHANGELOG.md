@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Manual refresh fetches current-page quotes and intraday charts once, including closed sessions and index details.
+
 - Fetch a one-time snapshot for newly added indices, including queued additions during closed sessions or while the panel is hidden; allow an initial intraday chart fetch on first detail display.
 
 - Fetch a one-time quote snapshot when adding a watchlist security, including outside trading hours. Queue additions made while another quote request is running.

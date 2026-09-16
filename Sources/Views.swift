@@ -55,7 +55,7 @@ struct OverlayView: View {
                 Spacer()
                 Button(action: openSearch) { Image(systemName: "plus") }
                     .accessibilityLabel("添加自选").help("添加自选")
-                Button { store.requestRefresh() } label: { Image(systemName: "arrow.clockwise") }
+                Button { store.refreshCurrentPage() } label: { Image(systemName: "arrow.clockwise") }
                     .disabled(store.isFetching).accessibilityLabel("刷新行情").help("刷新行情")
                 Button { store.pinned.toggle() } label: { Image(systemName: store.pinned ? "pin.fill" : "pin") }
                     .foregroundStyle(store.pinned ? accent : .secondary)
@@ -195,7 +195,7 @@ struct OverlayView: View {
                 Text(security.name).font(.headline)
                 Text(!MarketClock.isTrading(security.id) ? "休市中 · 暂无缓存报价" : store.quoteError ?? "尚未收到这只股票的有效报价")
                     .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                Button("重试") { store.requestRefresh() }.buttonStyle(.glass)
+                Button("重试") { store.refreshCurrentPage() }.buttonStyle(.glass)
             }.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

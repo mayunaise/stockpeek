@@ -282,14 +282,28 @@ final class StockStore: ObservableObject {
             resetRotation()
         }
     }
-    func requestRefresh(includeClosed: Bool = false) {
+    func refreshCurrentPage() {
+        guard networkEnabled, !sleeping else { return }
+        indices.refreshCurrentPage()
+        guard indices.detailID == nil else { return }
+        let ids = detailID.map { [$0] } ?? watchlist.visibleIDs
+        guard !ids.isEmpty else { return }
+        let previous = quoteTask
+        Task { [weak self] in
+            await previous?.value
+            guard let self, !self.sleeping else { return }
+            self.requestRefresh(includeClosed: true, ids: ids, refreshCharts: true)
+        }
+    }
+    func requestRefresh(includeClosed: Bool = false, ids: [String]? = nil, refreshCharts: Bool = false) {
         guard networkEnabled, !sleeping, quoteTask == nil, !watchlist.ids.isEmpty,
               includeClosed || !pendingQuoteIDs.isEmpty || watchlist.ids.contains(where: { MarketClock.isTrading($0, at: clock()) }) else { return }
         bootstrappingQuotes = includeClosed || !pendingQuoteIDs.isEmpty
         let generation = providerGeneration
         quoteTask = Task { [weak self] in
             guard let self else { return }
-            await self.reloadQuotes(includeClosed: includeClosed)
+            await self.reloadQuotes(includeClosed: includeClosed, ids: ids)
+            if refreshCharts { self.cancelMinutes(); self.requestMinutes(force: true) }
             if self.providerGeneration == generation {
                 self.quoteTask = nil
                 self.bootstrappingQuotes = false
@@ -297,12 +311,12 @@ final class StockStore: ObservableObject {
             }
         }
     }
-    func reloadQuotes(includeClosed: Bool = false) async {
+    func reloadQuotes(includeClosed: Bool = false, ids: [String]? = nil) async {
         guard !isFetching, !sleeping, !watchlist.ids.isEmpty else { return }
         isFetching = true
         let generation = providerGeneration
         defer { if providerGeneration == generation { isFetching = false } }
-        let requested = watchlist.ids.filter { includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock()) }
+        let requested = watchlist.ids.filter { (ids == nil || ids!.contains($0)) && (includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock())) }
         pendingQuoteIDs.subtract(requested)
         guard !requested.isEmpty else { return }
         do {
@@ -335,11 +349,11 @@ final class StockStore: ObservableObject {
         loadingMinutes = false
         loadingMinuteIDs = []
     }
-    private func requestMinutes() {
+    private func requestMinutes(force: Bool = false) {
         guard networkEnabled, !sleeping, expanded, indices.detailID == nil, minuteTask == nil else { return }
         initialMinutePending = initialMinutePending.filter { MarketClock.isChartMinute($0, at: clock()) || series[$0]?.day != MarketClock.day(clock(), id: $0) }
         let targets = detailID.map { [$0] } ?? watchlist.visibleIDs
-        let due = targets.filter { (MarketClock.isTrading($0, at: clock()) || initialMinutePending.contains($0)) && Date() >= (nextMinutePoll[$0] ?? .distantPast) }
+        let due = targets.filter { force || ((MarketClock.isTrading($0, at: clock()) || initialMinutePending.contains($0)) && Date() >= (nextMinutePoll[$0] ?? .distantPast)) }
         guard !due.isEmpty else { return }
         loadingMinutes = true
         loadingMinuteIDs = Set(due)
@@ -377,7 +391,7 @@ final class StockStore: ObservableObject {
                     }
                     self.loadingMinuteIDs.remove(id)
                     var next = pending.next()
-                    while let candidate = next, !MarketClock.isTrading(candidate, at: self.clock()) && !self.initialMinutePending.contains(candidate) { next = pending.next() }
+                    while let candidate = next, !force, !MarketClock.isTrading(candidate, at: self.clock()) && !self.initialMinutePending.contains(candidate) { next = pending.next() }
                     if let next {
                         self.initialMinutePending.remove(next)
                         group.addTask {
@@ -495,8 +509,18 @@ final class IndexStore: ObservableObject {
         guard writable else { return }
         if let data = try? JSONEncoder().encode(securities) { defaults.set(data, forKey: "marketIndices") }
     }
-    private func refreshQuotes(includeClosed: Bool = false) {
-        let requested = securities.map(\.id).filter { includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock()) }, source = client, token = generation
+    func refreshCurrentPage() {
+        let ids = Set([detailID, currentID].compactMap { $0 })
+        guard !ids.isEmpty else { return }
+        let previous = quoteTask
+        Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            self.refreshQuotes(includeClosed: true, ids: ids, refreshChart: true)
+        }
+    }
+    private func refreshQuotes(includeClosed: Bool = false, ids: Set<String>? = nil, refreshChart: Bool = false) {
+        let requested = securities.map(\.id).filter { (ids == nil || ids!.contains($0)) && (includeClosed || pendingQuoteIDs.contains($0) || MarketClock.isTrading($0, at: clock())) }, source = client, token = generation
         guard !requested.isEmpty, quoteTask == nil else { return }
         bootstrappingQuotes = includeClosed || !pendingQuoteIDs.isEmpty
         pendingQuoteIDs.subtract(requested)
@@ -513,12 +537,13 @@ final class IndexStore: ObservableObject {
             self.persistCache()
             self.nextQuote = Date().addingTimeInterval(self.quoteError == nil ? MarketClock.pollingInterval(at: Date(), ids: requested) : 60)
             self.quoteTask = nil; self.bootstrappingQuotes = false
+            if refreshChart { self.minuteTask?.cancel(); self.minuteTask = nil; self.refreshMinutes(force: true) }
             if !self.pendingQuoteIDs.isEmpty { self.refreshQuotes() }
         }
     }
-    private func refreshMinutes() {
+    private func refreshMinutes(force: Bool = false) {
         initialMinutePending = initialMinutePending.filter { MarketClock.isChartMinute($0, at: clock()) || cachedSeries[$0]?.day != MarketClock.day(clock(), id: $0) }
-        guard let id = detailID, MarketClock.isTrading(id, at: clock()) || initialMinutePending.contains(id) else { return }
+        guard let id = detailID, force || MarketClock.isTrading(id, at: clock()) || initialMinutePending.contains(id) else { return }
         initialMinutePending.remove(id)
         let source = client, token = generation
         minuteTask = Task { [weak self] in
